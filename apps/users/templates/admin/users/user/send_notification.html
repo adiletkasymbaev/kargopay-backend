@@ -1,0 +1,104 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static user_tags %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    .form-row {
+        margin-bottom: 20px;
+    }
+    .form-row label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    .form-row input, .form-row textarea, .form-row select {
+        width: 100%;
+        max-width: 400px;
+    }
+    .help-text {
+        color: #666;
+        font-size: 12px;
+        margin-top: 5px;
+    }
+    .submit-row {
+        margin-top: 20px;
+    }
+    .button {
+        padding: 10px 20px;
+        font-size: 14px;
+    }
+    .info-box {
+        background: #f8f9fa;
+        border-left: 4px solid #007bff;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{% trans 'Users' %}</a>
+    &rsaquo; <a href="{% url 'admin:users_user_changelist' %}">{% trans 'Users' %}</a>
+    &rsaquo; {% trans 'Отправить уведомление' %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <div class="info-box">
+        <strong>ℹ️ Информация:</strong><br>
+        Уведомление будет отправлено {{ selected_ids|split:','|length }} пользователю(ей).
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="apply" value="1">
+        <input type="hidden" name="selected_ids" value="{{ selected_ids }}">
+        
+        <fieldset class="module aligned">
+            <h2>{% trans 'Отправить уведомление выбранным пользователям' %}</h2>
+            
+            <div class="form-row">
+                {{ form.title.label_tag }}
+                {{ form.title }}
+                {% if form.title.help_text %}
+                    <div class="help-text">{{ form.title.help_text }}</div>
+                {% endif %}
+                {% if form.title.errors %}
+                    <ul class="errorlist">{{ form.title.errors }}</ul>
+                {% endif %}
+            </div>
+            
+            <div class="form-row">
+                {{ form.message.label_tag }}
+                {{ form.message }}
+                {% if form.message.help_text %}
+                    <div class="help-text">{{ form.message.help_text }}</div>
+                {% endif %}
+                {% if form.message.errors %}
+                    <ul class="errorlist">{{ form.message.errors }}</ul>
+                {% endif %}
+            </div>
+            
+            <div class="form-row">
+                {{ form.notification_type.label_tag }}
+                {{ form.notification_type }}
+                {% if form.notification_type.help_text %}
+                    <div class="help-text">{{ form.notification_type.help_text }}</div>
+                {% endif %}
+                {% if form.notification_type.errors %}
+                    <ul class="errorlist">{{ form.notification_type.errors }}</ul>
+                {% endif %}
+            </div>
+        </fieldset>
+        
+        <div class="submit-row">
+            <input type="submit" value="{% trans 'Отправить уведомление' %}" class="default">
+            <a href="{% url 'admin:users_user_changelist' %}" class="button">{% trans 'Отмена' %}</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
