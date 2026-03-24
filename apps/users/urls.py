@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import (
     CustomRegisterView,
-    UserProfileView,
+    UserProfileView, UserProfileUpdateView,
     ReferralStatsView,
     ApplyReferralCodeView,
     RequestVerificationCodeView,
@@ -15,6 +15,7 @@ from .views import (
 urlpatterns = [
     path('registration/', CustomRegisterView.as_view(), name='register'),
     path('profile/', UserProfileView.as_view(), name='user-profile'),
+    path('profile/update/', UserProfileUpdateView.as_view(), name='user-profile-update'),
     path('referral/stats/', ReferralStatsView.as_view(), name='referral-stats'),
     path('referral/apply/', ApplyReferralCodeView.as_view(), name='apply-referral'),
     path('verification/request/', RequestVerificationCodeView.as_view(), name='verification-request'),

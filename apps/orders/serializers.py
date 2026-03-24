@@ -63,6 +63,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
     bank = serializers.PrimaryKeyRelatedField(queryset=Bank.objects.filter(is_active=True))
     receipt_image = serializers.CharField()  # Принимает base64 строку
     recipient_qr_code = serializers.CharField(required=False, allow_blank=True)  # Принимает base64 строку
+    recipient_account = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Order
@@ -81,22 +82,22 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         """Проверка и декодирование base64 изображения"""
         if not value:
             raise serializers.ValidationError("Изображение чека обязательно")
-        
+
         # Проверяем что это base64 строка
         if not value.startswith('data:image/'):
             raise serializers.ValidationError("Неверный формат изображения. Ожидается base64 строка с data:image префиксом")
-        
+
         return value
 
     def validate_recipient_qr_code(self, value):
         """Проверка и декодирование base64 QR кода"""
         if not value:
             return value
-        
+
         # Проверяем что это base64 строка
         if not value.startswith('data:image/'):
             raise serializers.ValidationError("Неверный формат QR кода. Ожидается base64 строка с data:image префиксом")
-        
+
         return value
 
     def validate_amount_from(self, value):
@@ -109,13 +110,13 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         """Проверка корректности валют"""
         currency_from = data.get('currency_from', 'KGS')
         currency_to = data.get('currency_to', 'CNY')
-        
+
         # Проверка что валюты разные
         if currency_from == currency_to:
             raise serializers.ValidationError({
                 'currency_from': "Валюты должны быть разными"
             })
-        
+
         # Проверка допустимых валют
         valid_currencies = ['KGS', 'RUB', 'USD', 'CNY']
         if currency_from not in valid_currencies:
@@ -126,13 +127,28 @@ class OrderCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 'currency_to': f"Недопустимая валюта: {currency_to}"
             })
-        
+
+        # Проверяем что указан либо recipient_account, либо есть QR-код в профиле
+        user = self.context['request'].user
+        recipient_account = data.get('recipient_account', '').strip()
+        has_qr_in_profile = bool(user.alipay_qr_code)
+
+        if not recipient_account and not has_qr_in_profile:
+            raise serializers.ValidationError({
+                'recipient_account': "Необходимо указать счёт получателя или загрузить QR-код AliPay в профиле"
+            })
+
         return data
 
     def create(self, validated_data):
         user = self.context['request'].user
         validated_data['user'] = user
         validated_data['status'] = 'PENDING'
+
+        # Если recipient_account не указан, оставляем пустым (будет использоваться QR из профиля)
+        recipient_account = validated_data.get('recipient_account', '').strip()
+        if not recipient_account:
+            validated_data['recipient_account'] = None
 
         # Декодируем base64 изображения в файлы
         receipt_image_data = validated_data.pop('receipt_image')

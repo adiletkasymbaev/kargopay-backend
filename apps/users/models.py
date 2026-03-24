@@ -81,6 +81,15 @@ class User(AbstractUser):
         verbose_name=_('Скидка новичка использована')
     )
     
+    # AliPay QR код
+    alipay_qr_code = models.ImageField(
+        upload_to='users/alipay_qr/%Y/%m/%d/',
+        blank=True,
+        null=True,
+        verbose_name=_('QR-код AliPay'),
+        help_text=_('QR-код кошелька AliPay пользователя')
+    )
+
     # Настройки аутентификации
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
@@ -100,16 +109,16 @@ class User(AbstractUser):
     def get_discount_level(self):
         """Возвращает текущий уровень скидки и процент"""
         if self.total_orders >= 10:
-            return {'level': 'Gold', 'discount': 2.0}
+            return {'level': 'Gold', 'discount': 0.002}  # 0.002% = 0.00002
         elif self.total_orders >= 5:
-            return {'level': 'Silver', 'discount': 1.0}
+            return {'level': 'Silver', 'discount': 0.001}  # 0.001% = 0.00001
         else:
-            return {'level': 'Bronze', 'discount': 0.5}
+            return {'level': 'Bronze', 'discount': 0.0005}  # 0.0005% = 0.000005
 
     def get_first_order_discount(self):
         """Скидка для нового пользователя по рефералке"""
         if self.referred_by and not self.first_order_discount_used:
-            return 5.0  # 5% скидка на первую операцию
+            return 0.005  # 0.005% = 0.00005
         return 0.0
 
     def increment_orders(self):

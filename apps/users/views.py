@@ -10,7 +10,8 @@ from .serializers import (
     LoginSerializer, PasswordResetRequestSerializer,
     PasswordResetConfirmSerializer, DeleteAccountSerializer,
     CustomRegisterSerializer, ReferralCodeApplySerializer, UserSerializer,
-    ReferralStatsSerializer, RequestVerificationCodeSerializer, VerifyEmailSerializer
+    ReferralStatsSerializer, RequestVerificationCodeSerializer, VerifyEmailSerializer,
+    ProfileUpdateSerializer
 )
 from rest_framework.exceptions import ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -540,6 +541,38 @@ class UserProfileView(generics.RetrieveAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+@extend_schema(
+    tags=['User'],
+    summary='Обновить профиль пользователя',
+    description='Обновляет данные профиля: имя, фамилию, телефон, PIN-код и QR-код AliPay',
+    request=ProfileUpdateSerializer,
+    responses={
+        200: UserSerializer,
+        400: {'description': 'Ошибка валидации'},
+    },
+)
+class UserProfileUpdateView(generics.UpdateAPIView):
+    serializer_class = ProfileUpdateSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(UserSerializer(instance, context={'request': request}).data)
+
 
 @extend_schema(
     tags=['User'],

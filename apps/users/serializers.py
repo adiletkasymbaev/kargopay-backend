@@ -114,6 +114,7 @@ class CustomRegisterSerializer(RegisterSerializer):
     referral_code = serializers.CharField(required=False, allow_blank=True)
     first_name = serializers.CharField(required=True)
     last_name = serializers.CharField(required=True)
+    alipay_qr_code = serializers.ImageField(required=False, allow_null=True)
 
     def validate_username(self, username):
         # Игнорируем username, возвращаем пустую строку
@@ -155,6 +156,7 @@ class CustomRegisterSerializer(RegisterSerializer):
             'referral_code': self.validated_data.get('referral_code', ''),
             'first_name': self.validated_data.get('first_name', ''),
             'last_name': self.validated_data.get('last_name', ''),
+            'alipay_qr_code': self.validated_data.get('alipay_qr_code'),
         }
 
     def save(self, request):
@@ -172,6 +174,10 @@ class CustomRegisterSerializer(RegisterSerializer):
             referrer = User.objects.filter(referral_code=self.cleaned_data['referral_code']).first()
             if referrer:
                 user.referred_by = referrer
+
+        # Сохраняем QR-код AliPay если предоставлен
+        if self.cleaned_data.get("alipay_qr_code"):
+            user.alipay_qr_code = self.cleaned_data["alipay_qr_code"]
 
         user.set_password(self.cleaned_data["password1"])
         user.save()
@@ -199,13 +205,14 @@ class UserSerializer(serializers.ModelSerializer):
     discount_level = serializers.SerializerMethodField()
     first_order_discount = serializers.SerializerMethodField()
     referred_count = serializers.SerializerMethodField()
+    alipay_qr_code = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = (
             'id', 'email', 'first_name', 'last_name', 'referral_code',
             'total_orders', 'total_bonus', 'discount_level',
-            'first_order_discount', 'referred_count'
+            'first_order_discount', 'referred_count', 'alipay_qr_code'
         )
         read_only_fields = ('id', 'email', 'referral_code', 'total_orders', 'total_bonus')
 
@@ -217,6 +224,12 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_referred_count(self, obj):
         return obj.referred_users.count()
+
+    def get_alipay_qr_code(self, obj):
+        request = self.context.get('request')
+        if obj.alipay_qr_code and request:
+            return request.build_absolute_uri(obj.alipay_qr_code.url)
+        return None
     
     @extend_schema_field(OpenApiTypes.OBJECT)
     def get_discount_level(self, obj):
@@ -233,6 +246,44 @@ class UserSerializer(serializers.ModelSerializer):
 
 class ReferralCodeApplySerializer(serializers.Serializer):
     referral_code = serializers.CharField(max_length=10, required=True)
+
+
+class ProfileUpdateSerializer(serializers.ModelSerializer):
+    """Сериализатор для обновления профиля пользователя"""
+    alipay_qr_code = serializers.CharField(required=False, allow_null=True, allow_blank=True, write_only=True)
+
+    class Meta:
+        model = User
+        fields = (
+            'first_name', 'last_name', 'phone', 'pin_code', 'alipay_qr_code'
+        )
+
+    def validate_alipay_qr_code(self, value):
+        """Проверка и декодирование base64 изображения"""
+        if not value:
+            return None
+        
+        # Проверяем что это base64 строка
+        if not value.startswith('data:image/'):
+            raise serializers.ValidationError("Неверный формат изображения. Ожидается base64 строка с data:image префиксом")
+        
+        return value
+
+    def update(self, instance, validated_data):
+        # Если QR-код передан как base64, декодируем его
+        alipay_qr_code_data = validated_data.get('alipay_qr_code')
+        if alipay_qr_code_data:
+            from .utils import decode_base64_file
+            validated_data['alipay_qr_code'] = decode_base64_file(alipay_qr_code_data, 'alipay_qr.png')
+        elif alipay_qr_code_data == '':
+            # Если передана пустая строка - удаляем QR-код
+            validated_data['alipay_qr_code'] = None
+        else:
+            # Если QR-код не передан вообще - не трогаем существующий
+            validated_data.pop('alipay_qr_code', None)
+        
+        return super().update(instance, validated_data)
+
 
 class ReferralStatsSerializer(serializers.ModelSerializer):
     discount_level = serializers.SerializerMethodField()

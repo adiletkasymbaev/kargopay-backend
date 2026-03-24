@@ -242,8 +242,10 @@ class Order(models.Model):
     # Реквизиты получения
     recipient_account = models.CharField(
         max_length=255,
+        blank=True,
+        null=True,
         verbose_name=_('Счёт получателя'),
-        help_text=_('Кошелёк/телефон получателя (AliPay)')
+        help_text=_('Кошелёк/телефон получателя (AliPay). Если не указан, используется QR-код из профиля')
     )
     
     # Чек об оплате
