@@ -323,36 +323,23 @@ class Order(models.Model):
         return f"Заявка #{self.id} - {self.user.email} - {self.status}"
 
     def calculate_amounts(self):
-        """Расчёт сумм с учётом курса и скидки"""
+        """Расчёт сумм с учётом курса (без скидки - скидка рассчитывается на фронтенде)"""
         # 1. Получаем курс (самый свежий активный)
         rate_obj = ExchangeRate.objects.filter(
             from_currency=self.currency_from,
             to_currency=self.currency_to,
             is_active=True
         ).order_by('-updated_at').first()
-        
+
         if rate_obj:
             self.exchange_rate = rate_obj.rate
         else:
             self.exchange_rate = Decimal('1.0')
-        
-        # 2. Базовая сумма зачисления
-        base_amount_to = self.amount_from * self.exchange_rate
-        
-        # 3. Получаем процент скидки (конвертируем float в Decimal)
-        discount_float = self.user.get_discount_level()['discount']
-        self.discount_percent = Decimal(str(discount_float))
-        
-        # 4. Скидка на первую операцию по рефералке
-        first_order_discount_float = self.user.get_first_order_discount()
-        if first_order_discount_float > 0:
-            first_order_discount = Decimal(str(first_order_discount_float))
-            self.discount_percent = max(self.discount_percent, first_order_discount)
-        
-        # 5. Финальный расчёт
-        self.discount_amount = base_amount_to * (self.discount_percent / Decimal('100'))
-        self.amount_to = base_amount_to - self.discount_amount
+
+        # 2. Базовая сумма зачисления (без учёта скидки)
+        self.amount_to = self.amount_from * self.exchange_rate
         self.final_amount = self.amount_from
+        # discount_percent и discount_amount остаются 0 (установлены по умолчанию)
 
     def save(self, *args, **kwargs):
         # Расчёт сумм только при создании нового объекта

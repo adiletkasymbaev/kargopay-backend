@@ -94,14 +94,16 @@ class PaymentDetailView(generics.RetrieveAPIView):
 - `amount_from` — сумма к оплате
 - `currency_from` — валюта оплаты
 - `currency_to` — валюта зачисления
-- `amount_to` — сумма зачисления (рассчитывается автоматически)
+- `amount_to` — сумма зачисления (рассчитывается по курсу без учёта скидки)
 - `exchange_rate` — применённый курс
-- `discount_percent` — процент скидки
-- `discount_amount` — сумма скидки
-- `final_amount` — итоговая сумма
+- `discount_percent` — процент скидки (0, скидка рассчитывается на фронтенде)
+- `discount_amount` — сумма скидки (0, скидка рассчитывается на фронтенде)
+- `final_amount` — итоговая сумма (равна amount_from)
 - `recipient_account` — счёт получателя
 - `status` — статус заявки (PENDING)
-- `created_at` — дата создания''',
+- `created_at` — дата создания
+
+**Примечание:** Скидка не применяется автоматически. Расчёт скидки производится на стороне клиента.''',
     request=OrderCreateSerializer,
     responses={
         201: OrderCreateSerializer,
@@ -132,10 +134,10 @@ class PaymentDetailView(generics.RetrieveAPIView):
                 'amount_from': '5000.00',
                 'currency_from': 'KGS',
                 'currency_to': 'CNY',
-                'amount_to': '597.00',
+                'amount_to': '600.00',
                 'exchange_rate': '0.1200',
-                'discount_percent': '0.50',
-                'discount_amount': '2.99',
+                'discount_percent': '0.00',
+                'discount_amount': '0.00',
                 'final_amount': '5000.00',
                 'recipient_account': '+996 700 123 456',
                 'status': 'PENDING',
@@ -209,8 +211,8 @@ class OrderCreateView(generics.CreateAPIView):
 - `receipt_image` — URL чека об оплате
 - `status` — статус (PENDING, COMPLETED, REJECTED)
 - `manager_comment` — комментарий менеджера
-- `discount_percent` — процент скидки
-- `discount_amount` — сумма скидки
+- `discount_percent` — процент скидки (0, скидка рассчитывается на фронтенде)
+- `discount_amount` — сумма скидки (0, скидка рассчитывается на фронтенде)
 - `final_amount` — итоговая сумма
 - `created_at` — дата создания
 - `updated_at` — дата обновления
