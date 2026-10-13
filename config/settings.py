@@ -195,8 +195,10 @@ REST_AUTH = {
 }
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
 ]
 
 # Email backend
@@ -353,21 +355,6 @@ FIREBASE_PROJECT_ID = config('FIREBASE_PROJECT_ID', default='kargopay-app')
 # CORS Configuration
 # ==========================================
 
-# Разрешённые источники (фронтенд)
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",      # React/Vue стандарт
-    "http://127.0.0.1:3000",
-    "http://localhost:5173",      # Vite
-    "http://127.0.0.1:5173",
-    "http://localhost:8080",      # Другой популярный порт
-    "https://kargopay.app",       # Твой продакшен домен
-    "https://www.kargopay.app",
-]
-
-# Если нужно разрешить ВСЕ (только для разработки!)
-# CORS_ALLOW_ALL_ORIGINS = True
-
-# Разрешить cookies и авторизационные заголовки
 CORS_ALLOW_CREDENTIALS = True
 
 # Разрешённые методы

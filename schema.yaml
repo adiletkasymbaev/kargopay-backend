@@ -356,14 +356,16 @@ paths:
         - `amount_from` — сумма к оплате
         - `currency_from` — валюта оплаты
         - `currency_to` — валюта зачисления
-        - `amount_to` — сумма зачисления (рассчитывается автоматически)
+        - `amount_to` — сумма зачисления (рассчитывается по курсу без учёта скидки)
         - `exchange_rate` — применённый курс
-        - `discount_percent` — процент скидки
-        - `discount_amount` — сумма скидки
-        - `final_amount` — итоговая сумма
+        - `discount_percent` — процент скидки (0, скидка рассчитывается на фронтенде)
+        - `discount_amount` — сумма скидки (0, скидка рассчитывается на фронтенде)
+        - `final_amount` — итоговая сумма (равна amount_from)
         - `recipient_account` — счёт получателя
         - `status` — статус заявки (PENDING)
         - `created_at` — дата создания
+
+        **Примечание:** Скидка не применяется автоматически. Расчёт скидки производится на стороне клиента.
       summary: Создать заявку
       tags:
       - Orders
@@ -392,10 +394,10 @@ paths:
                   amount_from: '5000.00'
                   currency_from: KGS
                   currency_to: CNY
-                  amount_to: '597.00'
+                  amount_to: '600.00'
                   exchange_rate: '0.1200'
-                  discount_percent: '0.50'
-                  discount_amount: '2.99'
+                  discount_percent: '0.00'
+                  discount_amount: '0.00'
                   final_amount: '5000.00'
                   recipient_account: +996 700 123 456
                   status: PENDING
@@ -433,10 +435,10 @@ paths:
                     amount_from: '5000.00'
                     currency_from: KGS
                     currency_to: CNY
-                    amount_to: '597.00'
+                    amount_to: '600.00'
                     exchange_rate: '0.1200'
-                    discount_percent: '0.50'
-                    discount_amount: '2.99'
+                    discount_percent: '0.00'
+                    discount_amount: '0.00'
                     final_amount: '5000.00'
                     recipient_account: +996 700 123 456
                     status: PENDING
@@ -534,8 +536,8 @@ paths:
         - `receipt_image` — URL чека об оплате
         - `status` — статус (PENDING, COMPLETED, REJECTED)
         - `manager_comment` — комментарий менеджера
-        - `discount_percent` — процент скидки
-        - `discount_amount` — сумма скидки
+        - `discount_percent` — процент скидки (0, скидка рассчитывается на фронтенде)
+        - `discount_amount` — сумма скидки (0, скидка рассчитывается на фронтенде)
         - `final_amount` — итоговая сумма
         - `created_at` — дата создания
         - `updated_at` — дата обновления
@@ -1211,6 +1213,75 @@ paths:
               schema:
                 $ref: '#/components/schemas/User'
           description: ''
+  /api/v1/user/profile/update/:
+    put:
+      operationId: user_profile_update_update
+      description: 'Обновляет данные профиля: имя, фамилию, телефон, PIN-код и QR-код
+        AliPay'
+      summary: Обновить профиль пользователя
+      tags:
+      - User
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdateRequest'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Ошибка валидации
+          description: ''
+    patch:
+      operationId: user_profile_update_partial_update
+      description: 'Обновляет данные профиля: имя, фамилию, телефон, PIN-код и QR-код
+        AliPay'
+      summary: Обновить профиль пользователя
+      tags:
+      - User
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProfileUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProfileUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProfileUpdateRequest'
+      security:
+      - jwtAuth: []
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                description: Ошибка валидации
+          description: ''
   /api/v1/user/referral/apply/:
     post:
       operationId: user_referral_apply_create
@@ -1481,6 +1552,10 @@ components:
           type: string
         last_name:
           type: string
+        alipay_qr_code:
+          type: string
+          format: uri
+          nullable: true
       required:
       - email
       - first_name
@@ -1509,6 +1584,10 @@ components:
         last_name:
           type: string
           minLength: 1
+        alipay_qr_code:
+          type: string
+          format: binary
+          nullable: true
       required:
       - email
       - first_name
@@ -1621,8 +1700,10 @@ components:
           description: Курс обмена, применённый к операции
         recipient_account:
           type: string
+          nullable: true
           title: Счёт получателя
-          description: Кошелёк/телефон получателя (AliPay)
+          description: Кошелёк/телефон получателя (AliPay). Если не указан, используется
+            QR-код из профиля
           maxLength: 255
         receipt_image:
           type: string
@@ -1692,7 +1773,6 @@ components:
       - final_amount
       - id
       - receipt_image
-      - recipient_account
       - recipient_qr_code
       - service
       - service_name
@@ -1726,9 +1806,6 @@ components:
           maxLength: 3
         recipient_account:
           type: string
-          title: Счёт получателя
-          description: Кошелёк/телефон получателя (AliPay)
-          maxLength: 255
         recipient_qr_code:
           type: string
         receipt_image:
@@ -1789,7 +1866,6 @@ components:
       - final_amount
       - id
       - receipt_image
-      - recipient_account
       - service
       - status
     OrderCreateRequest:
@@ -1817,10 +1893,6 @@ components:
           maxLength: 3
         recipient_account:
           type: string
-          minLength: 1
-          title: Счёт получателя
-          description: Кошелёк/телефон получателя (AliPay)
-          maxLength: 255
         recipient_qr_code:
           type: string
         receipt_image:
@@ -1830,7 +1902,6 @@ components:
       - amount_from
       - bank
       - receipt_image
-      - recipient_account
       - service
     OrderStatusEnum:
       enum:
@@ -1965,6 +2036,33 @@ components:
           minLength: 1
       required:
       - email
+    PatchedProfileUpdateRequest:
+      type: object
+      description: Сериализатор для обновления профиля пользователя
+      properties:
+        first_name:
+          type: string
+          title: Имя
+          maxLength: 150
+        last_name:
+          type: string
+          title: Фамилия
+          maxLength: 150
+        phone:
+          type: string
+          nullable: true
+          title: Номер телефона
+          maxLength: 20
+        pin_code:
+          type: string
+          nullable: true
+          title: PIN-код
+          description: 4-значный пин-код для быстрых операций
+          maxLength: 4
+        alipay_qr_code:
+          type: string
+          writeOnly: true
+          nullable: true
     PaymentDetail:
       type: object
       properties:
@@ -2011,6 +2109,33 @@ components:
       - qr_code
       - service
       - service_name
+    ProfileUpdateRequest:
+      type: object
+      description: Сериализатор для обновления профиля пользователя
+      properties:
+        first_name:
+          type: string
+          title: Имя
+          maxLength: 150
+        last_name:
+          type: string
+          title: Фамилия
+          maxLength: 150
+        phone:
+          type: string
+          nullable: true
+          title: Номер телефона
+          maxLength: 20
+        pin_code:
+          type: string
+          nullable: true
+          title: PIN-код
+          description: 4-значный пин-код для быстрых операций
+          maxLength: 4
+        alipay_qr_code:
+          type: string
+          writeOnly: true
+          nullable: true
     PushToken:
       type: object
       properties:
@@ -2194,7 +2319,11 @@ components:
         referred_count:
           type: integer
           readOnly: true
+        alipay_qr_code:
+          type: string
+          readOnly: true
       required:
+      - alipay_qr_code
       - discount_level
       - email
       - first_order_discount
